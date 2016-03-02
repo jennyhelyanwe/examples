@@ -67,7 +67,8 @@ import exfile
 import math
 from collections import OrderedDict
 
-sys.path.append(os.sep.join((os.environ['OPENCMISS_ROOT'], 'cm', 'bindings', 'python')))
+#sys.path.append(os.sep.join((os.environ['OPENCMISS_ROOT'], 'cm', 'bindings', 'python')))
+from opencmiss.iron import iron as CMISS
 
 # Initialise OpenCMISS
 from lib import *
@@ -103,7 +104,7 @@ cellMLOption = [False]
 
 # Set up geometric model
 # longitudinal elements, circumferential elements, transmural elements
-elems = [8,8,2]
+elems = [32, 32 ,2]
 #cmd = '. ./matlab_batcher.sh benchmark_ellipse_linear ['+str(elems[0])+','+str(elems[1])+','+str(elems[2])+'];'
 #print cmd
 #if not os.path.exists("ellipse_benchmark_lin_"+str(elems[2])+"-"+str(elems[1])+"-"+str(elems[0])+".exnode"):
@@ -242,8 +243,8 @@ materialField = MaterialFieldSetUp(materialFieldUserNumber, region, decompositio
 # Set up equations set
 equationsSetField = CMISS.Field()  # Equations are also in a field
 equationsSet = CMISS.EquationsSet()  # Initialise an equation set.
-equationsSet.CreateStart(equationsSetUserNumber, region, fibreField, CMISS.EquationsSetClasses.ELASTICITY,
-                         CMISS.EquationsSetTypes.FINITE_ELASTICITY, CMISS.EquationsSetSubtypes.TRANSVERSE_ISOTROPIC_GUCCIONE,
+equationsSet.CreateStart(equationsSetUserNumber, region, fibreField, [CMISS.EquationsSetClasses.ELASTICITY,
+                         CMISS.EquationsSetTypes.FINITE_ELASTICITY, CMISS.EquationsSetSubtypes.TRANSVERSE_ISOTROPIC_GUCCIONE],
                          equationsSetFieldUserNumber, equationsSetField)
 equationsSet.CreateFinish()
 print "----> Set up equations set <---\n"
@@ -262,24 +263,23 @@ DependentFieldInitialise(dependentField, geometricField, 0.0)
 EquationsSetSetUp(equationsSet)
 
 p = 0.0
-for j in range(0,1):
-    pressure_increments = [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 1.0]
-    tolerances = [1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5]
-    iters = 1
+pressure_increments = numpy.linspace(0, 1.5, 10)
+print pressure_increments
+tol = 1e-5
+iters = 1
 
-    for i in range(0, len(pressure_increments)):
-        increm = pressure_increments[i]
-        p = p + increm
-        tol = tolerances[i]
-        print 'Applying pressure increment of: ', increm, ' using ', iters, ' iterations'
-        print 'Current pressure is: ', p
-        [problem, solverEquations] = ProblemSolverSetup(equationsSet, problemUserNumber, iters, tol, cellMLOption)
-        BCEndoPressure(solverEquations, dependentField, endocardial_nodes, increm, basal_nodes, option)
+for i in range(0, len(pressure_increments)):
+    increm = pressure_increments[i]
+    p = p + increm
+    print 'Applying pressure increment of: ', increm, ' using ', iters, ' iterations'
+    print 'Current pressure is: ', p
+    [problem, solverEquations] = ProblemSolverSetup(equationsSet, problemUserNumber, iters, tol, cellMLOption)
+    BCEndoPressure(solverEquations, dependentField, endocardial_nodes, increm, basal_nodes, option)
 
-        # Solve Problem
-        problem.Solve()
-        problem.Finalise()
-        solverEquations.Finalise()
+    # Solve Problem
+    problem.Solve()
+    problem.Finalise()
+    solverEquations.Finalise()
 
 # Export results
 materialField.Destroy()
