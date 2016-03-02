@@ -12,7 +12,7 @@
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-from opencmiss import CMISS
+from opencmiss.iron import iron as CMISS
 import numpy
 import math
 # =================================================================================#
@@ -849,15 +849,15 @@ def ProblemSolverSetup(equationsSet,problemUserNumber,maxIter, TOL, cellMLOption
     print "----> Set up equations <----\n"
     # Define problem
     problem = CMISS.Problem()
-    problem.CreateStart(problemUserNumber)
+    problem = CMISS.Problem()
+    
 
     if cellMLOption[0]:
-        problem.SpecificationSet(CMISS.ProblemClasses.ELASTICITY, CMISS.ProblemTypes.FINITE_ELASTICITY,
-                                 CMISS.ProblemSubTypes.FINITE_ELASTICITY_CELLML)
+    	problemType = [CMISS.ProblemClasses.ELASTICITY, CMISS.ProblemTypes.FINITE_ELASTICITY,
+                                 CMISS.ProblemSubTypes.FINITE_ELASTICITY_CELLML]
     else:
-        problem.SpecificationSet(CMISS.ProblemClasses.ELASTICITY, CMISS.ProblemTypes.FINITE_ELASTICITY,
-                                 CMISS.ProblemSubTypes.NONE)
-
+    	problemType = [CMISS.ProblemClasses.ELASTICITY, CMISS.ProblemTypes.FINITE_ELASTICITY]
+    problem.CreateStart(problemUserNumber, problemType)
     problem.CreateFinish()
     # Output
     print "----> Set up problem <----\n"

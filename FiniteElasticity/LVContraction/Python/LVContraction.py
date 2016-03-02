@@ -104,7 +104,7 @@ cellMLOption = [False]
  cellMLIntermediateFieldUserNumber) = range(1, 22)
 
 # longitudinal elements, circumferential elements, transmural elements
-elems = [8, 8, 2]
+elems = [32, 32, 2]
 """
 cmd = '. ./matlab_batcher.sh benchmark_ellipse_linear ['+str(elems[0])+','+str(elems[1])+','+str(elems[2])+']'
 if not os.path.exists("ellipse_benchmark_lin_"+str(elems[2])+"-"+str(elems[1])+"-"+str(elems[0])+".exnode"):
@@ -114,7 +114,12 @@ inputNodes = exfile.Exnode(
     "ellipse_benchmark_lin_" + str(elems[2]) + "-" + str(elems[1]) + "-" + str(elems[0]) + ".exnode")
 inputElems = exfile.Exelem(
     "ellipse_benchmark_lin_" + str(elems[2]) + "-" + str(elems[1]) + "-" + str(elems[0]) + ".exelem")
-num_apex_elem = elems[1] * elems[2]
+num_apex_elem = elems[1]*elems[2]
+apex_elems = []
+for i in range(0, elems[2]):
+    start = i * elems[1]*elems[0] + 1
+    end = start + elems[1] - 1
+    apex_elems.append([start, end])
 
 # Set up region and CS
 [numOfCompNodes, compNodeNum, CS, region] = BasicSetUp(regionUserNumber, coordinateSystemUserNumber)
@@ -133,6 +138,20 @@ nodes.CreateStart(region, inputNodes.num_nodes)
 nodes.CreateFinish()
 
 # Linear lagrange component
+"""
+linearElem = CMISS.MeshElements()
+linearElem.CreateStart(mesh, 1, linearBasis)
+for elem in inputElems.elements:
+    for i in range(1, elems[2]+1):
+        if (elem.number >= (i-1)*elems[1]*elems[0]) & (elem.number <= i*elems[1]*elems[0]):
+            if (elem.number >= apex_elems[i-1][0]) & (elem.number <= apex_elems[i-1][1]):
+                linearElem.BasisSet(elem.number, colBasis)
+                nodes = list(OrderedDict.fromkeys(elem.nodes))
+                nodes = map(int, nodes)
+                linearElem.NodesSet(elem.number, nodes)
+            else:
+                linearElem.NodesSet(elem.number, elem.nodes)
+"""
 linearElem = CMISS.MeshElements()
 linearElem.CreateStart(mesh, 1, linearBasis)
 for elem in inputElems.elements:
@@ -143,6 +162,7 @@ for elem in inputElems.elements:
         nodes = list(OrderedDict.fromkeys(elem.nodes))
         nodes = map(int, nodes)
         linearElem.NodesSet(elem.number, nodes)
+
 linearElem.CreateFinish()
 mesh.CreateFinish()
 
@@ -242,9 +262,9 @@ materialField = MaterialFieldSetUp(materialFieldUserNumber, region, decompositio
 # Set up equations set
 equationsSetField = CMISS.Field()  # Equations are also in a field
 equationsSet = CMISS.EquationsSet()  # Initialise an equation set.
-equationsSet.CreateStart(equationsSetUserNumber, region, fibreField, CMISS.EquationsSetClasses.ELASTICITY,
+equationsSet.CreateStart(equationsSetUserNumber, region, fibreField, [CMISS.EquationsSetClasses.ELASTICITY,
                          CMISS.EquationsSetTypes.FINITE_ELASTICITY,
-                         CMISS.EquationsSetSubtypes.GUCCIONE_ACTIVECONTRACTION,
+                         CMISS.EquationsSetSubtypes.GUCCIONE_ACTIVECONTRACTION],
                          equationsSetFieldUserNumber, equationsSetField)
 equationsSet.CreateFinish()
 print "----> Set up equations set <---\n"
@@ -270,8 +290,8 @@ deformedField = SetUpDeformedField(deformedFieldUserNumber, decomposition, regio
 
 Ta = 0.0
 p = 0.0
-p_increm = [5, 5, 5]
-Ta_increm = [20, 20, 20]
+p_increm = numpy.linspace(0, 10, 15)
+Ta_increm = numpy.linspace(0, 60, 15)
 
 #for i in range(0,1):
 for i in range(0, len(p_increm)):
